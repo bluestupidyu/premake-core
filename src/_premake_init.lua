@@ -497,6 +497,7 @@
 			"WPF",
 			"C++11",
 			"C++14",
+			"RelocatableDeviceCode",
 		},
 		aliases = {
 			FatalWarnings = { "FatalWarnings", "FatalCompileWarnings", "FatalLinkWarnings" },
