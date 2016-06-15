@@ -20,11 +20,28 @@
 		host_compiler = msc
 	end
 
-	local function prefixFlags(flags, prefix)
-		for k, v in pairs(flags) do
-			flags[k] = prefix .. " " .. v
+	local prefixFlags, prefixFunction
+
+	function prefixFunction(func, prefix)
+		local function wrapper(cfg)
+			local flags = func(cfg)
+			return prefixFlags(flags, prefix)
 		end
-		return flags
+		return wrapper
+	end
+
+	function prefixFlags(flags, prefix)
+		if type(flags) == "string" then
+			return prefix .. " " .. flags
+		elseif type(flags) == "function" then
+			 return prefixFunction(flags, prefix)
+		elseif type(flags) == "table" then
+			local pflags = {}
+			for k, v in pairs(flags) do
+				pflags[k] = prefixFlags(v, prefix)
+			end
+			return pflags
+		end
 	end
 
 	local function prefixCompilerFlags(flags)
@@ -63,7 +80,7 @@
 --    An array of C compiler flags.
 --
 
-	nvcc.cflags = {
+	nvcc.cflags = table.merge(prefixCompilerFlags(host_compiler.cflags), {
 		flags = {
 			RelocatableDeviceCode = "--relocatable-device-code=true",
 		},
@@ -75,12 +92,11 @@
 			Size = "-Os",
 			Speed = "-O3",
 		},
-	}
+	})
 
 	function nvcc.getcflags(cfg)
 		local flags = config.mapFlags(cfg, nvcc.cflags)
-		local hflags = prefixCompilerFlags(host_compiler.getcflags(cfg))
-		flags = table.join(flags, hflags, nvcc.getwarnings(cfg))
+		flags = table.join(flags, nvcc.getwarnings(cfg))
 		return flags
 	end
 
@@ -100,17 +116,15 @@
 --    An array of C++ compiler flags.
 --
 
-	nvcc.cxxflags = {
+	nvcc.cxxflags = table.merge(prefixCompilerFlags(host_compiler.cxxflags), {
 		flags = {
 			["C++11"] = "--std=c++11",
 			["C++14"] = "--std=c++14",
 		}
-	}
+	})
 
 	function nvcc.getcxxflags(cfg)
 		local flags = config.mapFlags(cfg, nvcc.cxxflags)
-		local hflags = prefixCompilerFlags(host_compiler.getcxxflags(cfg))
-		flags = table.join(flags, hflags)
 		return flags
 	end
 
@@ -187,7 +201,7 @@
 --    An array of linker flags.
 --
 
-	nvcc.ldflags = {
+	nvcc.ldflags = table.merge(prefixLinkerFlags(host_compiler.ldflags), {
 		architecture = {
 			x86 = "-m32",
 			x86_64 = "-m64",
@@ -195,12 +209,10 @@
 		kind = {
 			SharedLib = "-shared"
 		}
-	}
+	})
 
 	function nvcc.getldflags(cfg)
 		local flags = config.mapFlags(cfg, nvcc.ldflags)
-		local hflags = prefixLinkerFlags(host_compiler.getldflags(cfg))
-		flags = table.join(flags, hflags)
 		return flags
 	end
 
