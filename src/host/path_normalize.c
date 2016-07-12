@@ -64,9 +64,14 @@ static void* normalize_substring(const char* str, const char* endPtr, char* writ
 			}
 		}
 
-		/* add to the result, filtering out duplicate slashes */
+		/* add to the result, filtering out duplicate slashes not preceeded by a colon (URLs) */
 		if (ch != '/' || last != '/') {
 			*(writePtr++) = ch;
+		} else {
+			ptr = str - 2;
+			if (ptr < source || *ptr == ':' ) {
+				*(writePtr++) = ch;
+			}
 		}
 
 		last = ch;
