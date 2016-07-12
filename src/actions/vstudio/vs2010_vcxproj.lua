@@ -30,6 +30,7 @@
 	m.elements.project = function(prj)
 		return {
 			m.xmlDeclaration,
+			m.updateFileTable,
 			m.project,
 			m.projectConfigurations,
 			m.globals,
@@ -56,6 +57,60 @@
 		p.out('</Project>')
 	end
 
+
+--
+-- Update the file table with generated files.
+--
+	function m.updateFileTable(prj)
+		local function addGeneratedFile(cfg, source, filename)
+			-- mark that we have generated files.
+			cfg.project.hasGeneratedFiles = true
+
+			-- add generated file to the project.
+			local files = cfg.project._.files
+			local node = files[filename]
+			if not node then
+				node = fileconfig.new(filename, cfg.project)
+				node.vpath = path.join("Generated", node.name)
+				node.dependsOn = source
+				node.generated = true
+
+				files[filename] = node
+				table.insert(files, node)
+			end
+			fileconfig.addconfig(node, cfg)
+		end
+
+		local function addFile(cfg, node)
+			local filecfg = fileconfig.getconfig(node, cfg)
+			if not filecfg or filecfg.flags.ExcludeFromBuild then
+				return
+			end
+
+			if fileconfig.hasCustomBuildRule(filecfg) then
+				local buildoutputs = p.project.getrelative(cfg.project, filecfg.buildoutputs)
+				if buildoutputs and #buildoutputs > 0 then
+					for _, output in ipairs(buildoutputs) do
+						addGeneratedFile(cfg, node, output)
+					end
+				end
+			else
+				--addRuleFile(cfg, node)
+			end
+		end
+
+		local files = table.shallowcopy(prj._.files)
+		for cfg in project.eachconfig(prj) do
+			table.foreachi(files, function(node)
+				addFile(cfg, node)
+			end)
+		end
+
+		-- we need to reassign object sequences if we generated any files.
+		if prj.hasGeneratedFiles and p.project.iscpp(prj) then
+			p.oven.assignObjectSequences(prj)
+		end
+	end
 
 
 --
@@ -575,6 +630,15 @@
 	end
 
 
+	function m.generatedFile(cfg, file)
+		if file.generated then
+			local path = path.translate(file.dependsOn.relpath)
+			m.element("AutoGen", nil, 'true')
+			m.element("DependentUpon", nil, path)
+		end
+	end
+
+
 ---
 -- Write out the list of source code files, and any associated configuration.
 ---
@@ -598,7 +662,7 @@
 		priority   = 1,
 
 		emitFiles = function(prj, group)
-			m.emitFiles(prj, group, "ClInclude")
+			m.emitFiles(prj, group, "ClInclude", {m.generatedFile})
 		end,
 
 		emitFilter = function(prj, group)
@@ -638,7 +702,7 @@
 				end
 			end
 
-			m.emitFiles(prj, group, "ClCompile", nil, fileCfgFunc)
+			m.emitFiles(prj, group, "ClCompile", {m.generatedFile}, fileCfgFunc)
 		end,
 
 		emitFilter = function(prj, group)
@@ -655,7 +719,7 @@
 		priority = 3,
 
 		emitFiles = function(prj, group)
-			m.emitFiles(prj, group, "None")
+			m.emitFiles(prj, group, "None", {m.generatedFile})
 		end,
 
 		emitFilter = function(prj, group)
@@ -1166,7 +1230,7 @@
 	function m.debugInformationFormat(cfg)
 		local value
 		local tool, toolVersion = p.config.toolset(cfg)
-		if cfg.flags.Symbols then
+		if cfg.symbols == p.ON then
 			if cfg.debugformat == "c7" then
 				value = "OldStyle"
 			elseif cfg.architecture == "x86_64" or
@@ -1179,9 +1243,10 @@
 			else
 				value = "EditAndContinue"
 			end
-		end
-		if value then
-			m.element("DebugInformationFormat", nil, value)
+
+			if value then
+				m.element("DebugInformationFormat", nil, value)
+			end
 		end
 	end
 
@@ -1304,7 +1369,7 @@
 
 
 	function m.generateDebugInformation(cfg)
-		m.element("GenerateDebugInformation", nil, tostring(cfg.flags.Symbols ~= nil))
+		m.element("GenerateDebugInformation", nil, tostring(cfg.symbols == p.ON))
 	end
 
 
@@ -1762,8 +1827,9 @@
 
 
 	function m.programDataBaseFileName(cfg)
-		-- just a placeholder for overriding; will use the default VS name
-		-- for changes, see https://github.com/premake/premake-core/issues/151
+		if cfg.symbolspath and cfg.symbols == p.ON and cfg.debugformat ~= "c7" then
+			m.element("ProgramDataBaseFileName", nil, p.project.getrelative(cfg.project, cfg.symbolspath))
+		end
 	end
 
 
