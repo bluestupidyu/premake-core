@@ -83,6 +83,9 @@
 		warnings = {
 			Extra = "-Wall -Wextra",
 			Off = "-w",
+		},
+		symbols = {
+			On = "-g"
 		}
 	}
 
@@ -196,6 +199,11 @@
 -- Return a list of LDFLAGS for a specific configuration.
 --
 
+	function gcc.ldsymbols(cfg)
+		-- OS X has a bug, see http://lists.apple.com/archives/Darwin-dev/2006/Sep/msg00084.html
+		return iif(cfg.system == premake.MACOSX, "-Wl,-x", "-s")
+	end
+
 	gcc.ldflags = {
 		architecture = {
 			x86 = "-m32",
@@ -220,12 +228,9 @@
 			wii = "$(MACHDEP)",
 		},
 		symbols = {
-			Off = function(cfg)
-				-- OS X has a bug, see http://lists.apple.com/archives/Darwin-dev/2006/Sep/msg00084.html
-				return iif(cfg.system == premake.MACOSX, "-Wl,-x", "-s")
-			end,
-			Default = Off,
-		},
+			Off = gcc.ldsymbols,
+			Default = gcc.ldsymbols,
+		}
 	}
 
 	function gcc.getldflags(cfg)
