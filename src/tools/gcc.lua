@@ -65,9 +65,6 @@
 			Size = "-Os",
 			Speed = "-O3",
 		},
-		symbols = {
-			On = "-g",
-		},
 		pic = {
 			On = "-fPIC",
 		},
