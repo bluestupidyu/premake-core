@@ -45,7 +45,6 @@
 			LinkTimeOptimization = "-flto",
 			NoFramePointer = "-fomit-frame-pointer",
 			ShadowedVariables = "-Wshadow",
-			Symbols = "-g",
 			UndefinedIdentifiers = "-Wundef",
 		},
 		floatingpoint = {
@@ -65,6 +64,9 @@
 			Full = "-O3",
 			Size = "-Os",
 			Speed = "-O3",
+		},
+		symbols = {
+			On = "-g",
 		},
 		pic = {
 			On = "-fPIC",
@@ -201,10 +203,6 @@
 		},
 		flags = {
 			LinkTimeOptimization = "-flto",
-			_Symbols = function(cfg)
-				-- OS X has a bug, see http://lists.apple.com/archives/Darwin-dev/2006/Sep/msg00084.html
-				return iif(cfg.system == premake.MACOSX, "-Wl,-x", "-s")
-			end,
 		},
 		kind = {
 			SharedLib = function(cfg)
@@ -220,7 +218,14 @@
 		},
 		system = {
 			wii = "$(MACHDEP)",
-		}
+		},
+		symbols = {
+			Off = function(cfg)
+				-- OS X has a bug, see http://lists.apple.com/archives/Darwin-dev/2006/Sep/msg00084.html
+				return iif(cfg.system == premake.MACOSX, "-Wl,-x", "-s")
+			end,
+			Default = Off,
+		},
 	}
 
 	function gcc.getldflags(cfg)
