@@ -1205,7 +1205,7 @@
 		vectorextensions(value:sub(7))
 	end,
 	function(value)
-		vectorextension "Default"
+		vectorextensions "Default"
 	end)
 
 
