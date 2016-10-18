@@ -78,7 +78,7 @@
 			["SSE4.1"] = "-msse4.1",
 		},
 		warnings = {
-			Extra = "-Wall -Wextra",
+			Extra = { "-Wall", "-Wextra" },
 			Off = "-w",
 		},
 		symbols = {
