@@ -118,6 +118,10 @@
 --
 
 	nvcc.cflags = {
+		architecture = {
+			x86 = "-m32",
+			x86_64 = "-m64",
+		},
 		flags = {
 			RelocatableDeviceCode = "--relocatable-device-code=true",
 		},
@@ -135,6 +139,12 @@
 			Maxwell = "--gpu-architecture compute_50",
 			Pascal = "--gpu-architecture compute_60",
 			Volta = "--gpu-architecture compute_70",
+		},
+		warnings = {
+			Off = "-w",
+		},
+		symbols = {
+			On = "-g",
 		}
 	}
 
